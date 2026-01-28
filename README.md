@@ -49,5 +49,5 @@ Les benchmarks mesurent :
 
 Projet créé pour comparer les architectures single-threaded vs multi-threaded dans les solutions de cache.
 
-<img width="1537" height="920" alt="Capture d’écran du 2026-01-27 21-17-15" src="https://github.com/user-attachments/assets/a23e0ea1-c5d4-4795-a417-6215b6f28732" />
+<img width="1537" height="920" alt="Capture d’écran du 2026-01-28 09-46-17" src="https://github.com/user-attachments/assets/1c11b52b-2753-4d0c-a2b1-9c30af66aa25" />
 
