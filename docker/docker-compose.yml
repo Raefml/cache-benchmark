@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cache-benchmark-postgres
+    environment:
+      POSTGRES_DB: cachedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cache-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: cache-benchmark-redis
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cache-network
+
+  # Valkey (Redis fork)
+  valkey:
+    image: valkey/valkey:latest
+    container_name: cache-benchmark-valkey
+    command: valkey-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cache-network
+
+  # DragonflyDB
+  dragonflydb:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: cache-benchmark-dragonflydb
+    command: --maxmemory=512mb --proactor_threads=2
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cache-network
+
+  # KeyDB
+  keydb:
+    image: eqalpha/keydb:latest
+    container_name: cache-benchmark-keydb
+    command: keydb-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6382:6379"
+    healthcheck:
+      test: ["CMD", "keydb-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cache-network
+
+  # Memcached
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: cache-benchmark-memcached
+    command: memcached -m 512
+    ports:
+      - "11211:11211"
+    networks:
+      - cache-network
+
+  # Hazelcast
+  hazelcast:
+    image: hazelcast/hazelcast:5.3.6
+    container_name: cache-benchmark-hazelcast
+    environment:
+      JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "5701:5701"
+    volumes:
+      - ./hazelcast/hazelcast.xml:/opt/hazelcast/config/hazelcast.xml
+    networks:
+      - cache-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cache-benchmark-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - cache-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cache-benchmark-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: ""
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - cache-network
+
+networks:
+  cache-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
